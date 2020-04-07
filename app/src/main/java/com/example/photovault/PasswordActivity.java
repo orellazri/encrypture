@@ -18,6 +18,8 @@ import com.pddstudio.preferences.encrypted.EncryptedPreferences;
 
 public class PasswordActivity extends AppCompatActivity {
 
+    private EncryptedPreferences encryptedPreferences;
+
     /* Elements */
     private EditText etPassword;
     private Button btnStart;
@@ -25,6 +27,18 @@ public class PasswordActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        String androidId = Settings.Secure.getString(getApplicationContext().getContentResolver(), Settings.Secure.ANDROID_ID);
+        encryptedPreferences = new EncryptedPreferences.Builder(this).withEncryptionPassword(androidId).build();
+
+        // Check if this is the user's first time in the app (no password is set)
+        if (encryptedPreferences.getString("password", "").equals("")) {
+            // Start the welcome activity
+            Intent intent = new Intent(this, WelcomeActivity.class);
+            startActivity(intent);
+            return;
+        }
+
         setContentView(R.layout.activity_password);
 
         /* Elements */
@@ -37,17 +51,13 @@ public class PasswordActivity extends AppCompatActivity {
                 handleStartButton();
             }
         });
-
-        String androidId = Settings.Secure.getString(getApplicationContext().getContentResolver(), Settings.Secure.ANDROID_ID);
-        EncryptedPreferences encryptedPreferences = new EncryptedPreferences.Builder(this).withEncryptionPassword(androidId).build();
-        Toast.makeText(this, ""+encryptedPreferences.getString("password", ""), Toast.LENGTH_SHORT).show();
     }
 
     private void handleStartButton() {
         if (etPassword.length() == 0) return;
 
         // Check password
-        if (etPassword.getText().toString().equals("666")) {
+        if (etPassword.getText().toString().equals(encryptedPreferences.getString("password", ""))) {
             Intent intent = new Intent(this, MainActivity.class);
             startActivity(intent);
         } else {

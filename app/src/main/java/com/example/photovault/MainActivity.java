@@ -1,8 +1,11 @@
 package com.example.photovault;
 
-import android.content.Context;
 import android.content.Intent;
-import android.os.Build;
+import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.media.MediaMetadataRetriever;
+import android.media.ThumbnailUtils;
+import android.net.Uri;
 import android.os.Bundle;
 
 import com.esafirm.imagepicker.features.ImagePicker;
@@ -13,8 +16,10 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
+import android.provider.MediaStore;
 import android.provider.Settings;
 import android.util.Log;
+import android.util.Size;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -23,9 +28,12 @@ import android.widget.GridView;
 import android.widget.Toast;
 
 import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.net.URLConnection;
+import java.nio.ByteBuffer;
 import java.util.List;
 
 import javax.crypto.Cipher;
@@ -189,8 +197,32 @@ public class MainActivity extends AppCompatActivity {
         byte[][] imagesBytes = new byte[listOfFiles.length][];
         for (int i = 0; i < listOfFiles.length; i++) {
             if (!listOfFiles[i].isFile()) continue;
+
             try {
-                imagesBytes[i] = decryptImage(listOfFiles[i].getPath());
+                String mimeType = URLConnection.guessContentTypeFromName(listOfFiles[i].getPath());
+
+                if (mimeType.startsWith("video")) {
+                    byte[] decrypted = decryptImage(listOfFiles[i].getPath());
+
+                    // Create a temporary video file
+                    File tempFile = File.createTempFile("temp-vid", ".mp4", getCacheDir());
+                    FileOutputStream fos = new FileOutputStream(tempFile);
+                    fos.write(decrypted);
+                    fos.close();
+
+                    // Create a thumbnail from the video file
+                    Bitmap bitmap = ThumbnailUtils.createVideoThumbnail(tempFile.getPath(), MediaStore.Video.Thumbnails.MINI_KIND);
+                    tempFile.delete();
+
+                    ByteArrayOutputStream stream = new ByteArrayOutputStream();
+                    assert bitmap != null;
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
+                    imagesBytes[i] = stream.toByteArray();
+                    bitmap.recycle();
+                } else {
+                    // If it's a picture
+                    imagesBytes[i] = decryptImage(listOfFiles[i].getPath());
+                }
             } catch (Exception e) {
                 e.printStackTrace();
                 Toast.makeText(getApplicationContext(), "Unable to decrypt photo", Toast.LENGTH_LONG).show();
