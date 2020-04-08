@@ -1,5 +1,4 @@
-package com.example.photovault;
-
+package com.reaperberri.encrypture;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
@@ -39,7 +38,7 @@ public class WelcomeActivity extends AppCompatActivity {
     }
 
     private void handleSetButton() {
-        if (etPassword.getText().equals("")) return;
+        if (etPassword.getText().toString().equals("")) return;
 
         encryptedPreferences.edit().putString("password", etPassword.getText().toString()).apply();
         Intent intent = new Intent(this, MainActivity.class);

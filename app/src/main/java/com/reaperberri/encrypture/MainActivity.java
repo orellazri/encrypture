@@ -1,11 +1,7 @@
-package com.example.photovault;
-
+package com.reaperberri.encrypture;
 import android.content.Intent;
-import android.database.Cursor;
 import android.graphics.Bitmap;
-import android.media.MediaMetadataRetriever;
 import android.media.ThumbnailUtils;
-import android.net.Uri;
 import android.os.Bundle;
 
 import com.esafirm.imagepicker.features.ImagePicker;
@@ -18,8 +14,6 @@ import androidx.appcompat.widget.Toolbar;
 
 import android.provider.MediaStore;
 import android.provider.Settings;
-import android.util.Log;
-import android.util.Size;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -33,8 +27,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.net.URLConnection;
-import java.nio.ByteBuffer;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.crypto.Cipher;
 import javax.crypto.spec.IvParameterSpec;
@@ -78,6 +73,7 @@ public class MainActivity extends AppCompatActivity {
                         .toolbarImageTitle("Tap to select photos")
                         .includeVideo(true)
                         .showCamera(false)
+                        .theme(R.style.AppTheme_NoActionBar)
                         .start();
             }
         });
@@ -195,6 +191,8 @@ public class MainActivity extends AppCompatActivity {
 
         assert listOfFiles != null;
         byte[][] imagesBytes = new byte[listOfFiles.length][];
+        Map<Integer, String> videosList = new HashMap<>();
+
         for (int i = 0; i < listOfFiles.length; i++) {
             if (!listOfFiles[i].isFile()) continue;
 
@@ -205,15 +203,17 @@ public class MainActivity extends AppCompatActivity {
                     byte[] decrypted = decryptImage(listOfFiles[i].getPath());
 
                     // Create a temporary video file
-                    File tempFile = File.createTempFile("temp-vid", ".mp4", getCacheDir());
+                    File tempFile = File.createTempFile(listOfFiles[i].getName(), ".mp4", getCacheDir());
+                    tempFile.deleteOnExit();
                     FileOutputStream fos = new FileOutputStream(tempFile);
                     fos.write(decrypted);
                     fos.close();
 
+                    // Add video to videos list
+                    videosList.put(i, tempFile.getPath());
+
                     // Create a thumbnail from the video file
                     Bitmap bitmap = ThumbnailUtils.createVideoThumbnail(tempFile.getPath(), MediaStore.Video.Thumbnails.MINI_KIND);
-                    tempFile.delete();
-
                     ByteArrayOutputStream stream = new ByteArrayOutputStream();
                     assert bitmap != null;
                     bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
@@ -225,7 +225,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             } catch (Exception e) {
                 e.printStackTrace();
-                Toast.makeText(getApplicationContext(), "Unable to decrypt photo", Toast.LENGTH_LONG).show();
+                Toast.makeText(getApplicationContext(), "Unable to decrypt file", Toast.LENGTH_LONG).show();
             }
         }
 
@@ -234,21 +234,18 @@ public class MainActivity extends AppCompatActivity {
         gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                Intent intent = new Intent(getApplicationContext(), FullScreenActivity.class);
-                intent.putExtra("image", imagesBytes[position]);
-                startActivity(intent);
+                // Check if the image is a video
+                if (videosList.containsKey(position)) {
+                    Intent intent = new Intent(getApplicationContext(), VideoPlayerActivity.class);
+                    intent.putExtra("videoPath", videosList.get(position));
+                    startActivity(intent);
+                } else {
+                    // It's not a video, so show it in full screen
+                    Intent intent = new Intent(getApplicationContext(), FullScreenActivity.class);
+                    intent.putExtra("image", imagesBytes[position]);
+                    startActivity(intent);
+                }
             }
         });
     }
-
-    /*
-    public static void copyFile(File src, File dst) throws IOException {
-        FileInputStream inStream = new FileInputStream(src);
-        FileOutputStream outStream = new FileOutputStream(dst);
-        FileChannel inChannel = inStream.getChannel();
-        FileChannel outChannel = outStream.getChannel();
-        inChannel.transferTo(0, inChannel.size(), outChannel);
-        inStream.close();
-        outStream.close();
-    }*/
 }

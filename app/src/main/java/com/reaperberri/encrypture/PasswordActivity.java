@@ -1,5 +1,4 @@
-package com.example.photovault;
-
+package com.reaperberri.encrypture;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Context;

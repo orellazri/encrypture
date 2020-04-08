@@ -1,5 +1,4 @@
-package com.example.photovault;
-
+package com.reaperberri.encrypture;
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;

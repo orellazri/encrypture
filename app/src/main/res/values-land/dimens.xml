@@ -1,0 +1,3 @@
+<resources>
+    <dimen name="grid_columnWidth">200dp</dimen>
+</resources>
