@@ -1,6 +1,11 @@
 package com.reaperberri.encrypture;
+
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.PorterDuff;
 import android.media.ThumbnailUtils;
 import android.os.Bundle;
 
@@ -14,11 +19,13 @@ import androidx.appcompat.widget.Toolbar;
 
 import android.provider.MediaStore;
 import android.provider.Settings;
+import android.util.Log;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.AdapterView;
 import android.widget.GridView;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import java.io.BufferedInputStream;
@@ -27,6 +34,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.net.URLConnection;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,9 +49,13 @@ public class MainActivity extends AppCompatActivity {
     private IvParameterSpec ivspec;
 
     public String filesDir;
+    private boolean selectMode = false;
+    private ArrayList<Integer> selected = new ArrayList<>();
 
     /* Elements */
     private GridView gridView;
+
+    private boolean movingToAnotherActivity = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -91,13 +103,25 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
 
-        //noinspection SimplifiableIfStatement
+        // Settings
         if (id == R.id.action_settings) {
+            return true;
+        // Select
+        } else if (id == R.id.action_select) {
+            if (!selectMode) {
+                // If we are not in select mode, enable select mode
+                selectMode = true;
+                item.setTitle(R.string.deselect);
+            } else {
+                // If we are in select mode, disable select mode
+                // and clear the selected list
+                selectMode = false;
+                selected.clear();
+                item.setTitle(R.string.select);
+            }
+
             return true;
         }
 
@@ -186,13 +210,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updateGrid() {
-        // Get all files in /files folder
+        // Get all files in "/files" folder
         File[] listOfFiles = new File(filesDir).listFiles();
 
         assert listOfFiles != null;
         byte[][] imagesBytes = new byte[listOfFiles.length][];
         Map<Integer, String> videosList = new HashMap<>();
 
+        // Go through all the files in the folder
         for (int i = 0; i < listOfFiles.length; i++) {
             if (!listOfFiles[i].isFile()) continue;
 
@@ -214,8 +239,17 @@ public class MainActivity extends AppCompatActivity {
 
                     // Create a thumbnail from the video file
                     Bitmap bitmap = ThumbnailUtils.createVideoThumbnail(tempFile.getPath(), MediaStore.Video.Thumbnails.MINI_KIND);
-                    ByteArrayOutputStream stream = new ByteArrayOutputStream();
                     assert bitmap != null;
+
+                    // Draw video indicator
+                    Canvas canvas = new Canvas(bitmap);
+                    canvas.drawBitmap(bitmap, 0, 0, null);
+                    Paint paint = new Paint();
+                    paint.setColor(Color.GREEN);
+                    canvas.drawCircle(30, 300, 20, paint);
+
+                    // Stream bitmap to bytes array
+                    ByteArrayOutputStream stream = new ByteArrayOutputStream();
                     bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
                     imagesBytes[i] = stream.toByteArray();
                     bitmap.recycle();
@@ -234,18 +268,51 @@ public class MainActivity extends AppCompatActivity {
         gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                // Check if the image is a video
-                if (videosList.containsKey(position)) {
-                    Intent intent = new Intent(getApplicationContext(), VideoPlayerActivity.class);
-                    intent.putExtra("videoPath", videosList.get(position));
-                    startActivity(intent);
+                // Check if we are in select mode
+                if (selectMode) {
+                    if (selected.contains(position)) {
+                        // If this image is already selected, remove it
+                        selected.remove((Integer) position);
+                        ((ImageView) view).setColorFilter(Color.TRANSPARENT);
+                    } else {
+                        // If this image is not already selected, select it
+                        selected.add(position);
+                        ((ImageView) view).setColorFilter(Color.rgb(90, 90, 90), PorterDuff.Mode.MULTIPLY);
+                    }
                 } else {
-                    // It's not a video, so show it in full screen
-                    Intent intent = new Intent(getApplicationContext(), FullScreenActivity.class);
-                    intent.putExtra("image", imagesBytes[position]);
-                    startActivity(intent);
+                    // Not in select mode. Open the picture/video
+                    movingToAnotherActivity = true;
+
+                    // Check if the image is a video
+                    if (videosList.containsKey(position)) {
+                        Intent intent = new Intent(getApplicationContext(), VideoPlayerActivity.class);
+                        intent.putExtra("videoPath", videosList.get(position));
+                        startActivity(intent);
+                    } else {
+                        // It's not a video, so show it in full screen
+                        Intent intent = new Intent(getApplicationContext(), FullScreenActivity.class);
+                        intent.putExtra("image", imagesBytes[position]);
+                        startActivity(intent);
+                    }
                 }
             }
         });
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        
+        movingToAnotherActivity = false;
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+
+        // If not moving to another activity, stop the app when stopped (minimized)
+        if (!movingToAnotherActivity) {
+            finish();
+        }
     }
 }

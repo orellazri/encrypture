@@ -50,6 +50,13 @@ public class PasswordActivity extends AppCompatActivity {
                 handleStartButton();
             }
         });
+
+        //=====================================
+        // TODO: REMOVE THIS
+        // FOR NOW ONLY! SKIP PASSWORD FOR FASTER DEVELOPMENT
+        Intent intent = new Intent(this, MainActivity.class);
+        startActivity(intent);
+        //=====================================
     }
 
     private void handleStartButton() {

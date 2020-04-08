@@ -4,4 +4,6 @@
     <string name="password">Password</string>
     <string name="start">Start</string>
     <string name="set_password">Set Password</string>
+    <string name="select">Select</string>
+    <string name="deselect">Deselect</string>
 </resources>
