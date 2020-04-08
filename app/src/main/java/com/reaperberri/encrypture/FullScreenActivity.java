@@ -32,4 +32,11 @@ public class FullScreenActivity extends AppCompatActivity {
         ImageAdapter imageAdapter = new ImageAdapter(this, imagesArray);
         imageView.setImageBitmap(BitmapFactory.decodeByteArray(imagesArray[0], 0, imagesArray[0].length));
     }
+
+    @Override
+    protected void onUserLeaveHint() {
+        super.onUserLeaveHint();
+
+        System.exit(0);
+    }
 }

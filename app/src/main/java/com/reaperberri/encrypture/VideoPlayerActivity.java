@@ -64,4 +64,11 @@ public class VideoPlayerActivity extends AppCompatActivity {
         // Resume player
         player.setPlayWhenReady(true);
     }
+
+    @Override
+    protected void onUserLeaveHint() {
+        super.onUserLeaveHint();
+
+        System.exit(0);
+    }
 }

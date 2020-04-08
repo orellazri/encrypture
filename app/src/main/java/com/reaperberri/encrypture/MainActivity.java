@@ -48,7 +48,9 @@ public class MainActivity extends AppCompatActivity {
     private String androidId;
     private IvParameterSpec ivspec;
 
-    public String filesDir;
+    private String filesDir;
+    private HashMap<Integer, String> filesPosToPath = new HashMap<Integer, String>();
+
     private boolean selectMode = false;
     private ArrayList<Integer> selected = new ArrayList<>();
 
@@ -79,6 +81,8 @@ public class MainActivity extends AppCompatActivity {
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                movingToAnotherActivity = true;
+
                 ImagePicker.create(MainActivity.this)
                         .folderMode(true)
                         .toolbarFolderTitle("Select a folder")
@@ -212,10 +216,10 @@ public class MainActivity extends AppCompatActivity {
     private void updateGrid() {
         // Get all files in "/files" folder
         File[] listOfFiles = new File(filesDir).listFiles();
-
         assert listOfFiles != null;
+
         byte[][] imagesBytes = new byte[listOfFiles.length][];
-        Map<Integer, String> videosList = new HashMap<>();
+        Map<Integer, String> videosList = new HashMap<>(); // id: path
 
         // Go through all the files in the folder
         for (int i = 0; i < listOfFiles.length; i++) {
@@ -224,6 +228,7 @@ public class MainActivity extends AppCompatActivity {
             try {
                 String mimeType = URLConnection.guessContentTypeFromName(listOfFiles[i].getPath());
 
+                // Check if the file is a video or not
                 if (mimeType.startsWith("video")) {
                     byte[] decrypted = decryptImage(listOfFiles[i].getPath());
 
@@ -254,9 +259,12 @@ public class MainActivity extends AppCompatActivity {
                     imagesBytes[i] = stream.toByteArray();
                     bitmap.recycle();
                 } else {
-                    // If it's a picture
+                    // Save decrypted image to bytes array
                     imagesBytes[i] = decryptImage(listOfFiles[i].getPath());
                 }
+
+                // Updates files pos to path list
+                filesPosToPath.put(i, listOfFiles[i].getPath());
             } catch (Exception e) {
                 e.printStackTrace();
                 Toast.makeText(getApplicationContext(), "Unable to decrypt file", Toast.LENGTH_LONG).show();
@@ -312,7 +320,7 @@ public class MainActivity extends AppCompatActivity {
 
         // If not moving to another activity, stop the app when stopped (minimized)
         if (!movingToAnotherActivity) {
-            finish();
+            System.exit(0);
         }
     }
 }
